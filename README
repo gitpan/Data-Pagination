@@ -1,4 +1,4 @@
-Data-Pagination version 0.37
+Data-Pagination version 0.43
 ============================
 
 This class intended for organization of paginal navigation on
@@ -16,4 +16,4 @@ To install this module type the following:
 
 AUTHOR
 
-Andrian Zubko <ondr@cpan.org>
+Andrian Zubko <ondr@mail.ru>

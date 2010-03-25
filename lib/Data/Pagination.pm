@@ -1,88 +1,92 @@
-package Data::Pagination;
+package Pagination;
 
-use 5.005;
 use strict;
 
-our $VERSION = '0.37';
+our $VERSION = '0.43';
 
-# {{{ constructor
+# {{{ new()
 
-# Making all calculations and storing results at class properties
+# Constructor.
+# Making all calculations and storing results at class properties.
+# Param int $total_entries Total number of entries (>= 1)
+# Param int $entries_per_page Number of entries per page (>= 1)
+# Param int $pages_per_set Number of pages per set (>= 1)
+# Param int $current_page Current number of page
 
-sub new
-{
-    my $self = bless {}, shift;
+sub new {
+    my ($class, $total_entries, $entries_per_page, $pages_per_set, $current_page) = @_;
 
-    # statistics:
+    my $self = bless {} => $class;
 
-    $self->{total_entries} = shift;
-    $self->{entries_per_page} = shift;
-    $self->{pages_per_set} = shift;
+    # total number of entries (>= 1) (copied from arguments)
+    $self->{total_entries} = $total_entries;
 
-    # pages control:
+    # number of entries per page (>= 1) (copied from arguments)
+    $self->{entries_per_page} = $entries_per_page;
 
-    # total number of pages
+    # number of pages per set (>= 1) (copied from arguments)
+    $self->{pages_per_set} = $pages_per_set;
+
+    # total number of pages (>= 1)
     $self->{total_pages} = int(($self->{total_entries} - 1) / $self->{entries_per_page}) + 1;
 
-    # current page
-    $self->{current_page} = shift;
+    # current number of page (>= 1) (corrected)
+    $self->{current_page} = $current_page;
     if ($self->{current_page} < 1) {
         $self->{current_page} = 1;
     } elsif ($self->{current_page} > $self->{total_pages}) {
         $self->{current_page} = $self->{total_pages};
     }
 
-    # previous number of page
-    # undefine, if haven't place to be
+    # previous number of page (>= 1 or undef)
     $self->{prev_page} = $self->{current_page} - 1;
     if ($self->{prev_page} < 1) {
         $self->{prev_page} = undef;
     }
 
-    # next number of page
-    # undefine, if haven't place to be
+    # next number of page (>= 1 or undef)
     $self->{next_page} = $self->{current_page} + 1;
     if ($self->{next_page} > $self->{total_pages}) {
         $self->{next_page} = undef;
     }
 
-    # pages set control:
-
-    # start position of current set
+    # start position of current set (>= 1)
     $self->{start_of_set} = int(($self->{current_page} - 1) / $self->{pages_per_set}) * $self->{pages_per_set} + 1;
 
-    # end position of current set
+    # end position of current set (>= 1)
     $self->{end_of_set} = $self->{start_of_set} + $self->{pages_per_set} - 1;
     if ($self->{end_of_set} > $self->{total_pages}) {
         $self->{end_of_set} = $self->{total_pages};
     }
 
-    # nearest page number in previous set
-    # undefine, if haven't place to be
+    # numbers of set (one or more numbers in array)
+    $self->{numbers_of_set} = [];
+    for (my $i = $self->{start_of_set}; $i <= $self->{end_of_set}; ++$i) {
+        push(@{$self->{numbers_of_set}}, $i);
+    }
+
+    # nearest page number of the previous set (>= 1 or undef)
     $self->{page_of_prev_set} = $self->{start_of_set} - 1;
     if ($self->{page_of_prev_set} < 1) {
         $self->{page_of_prev_set} = undef;
     }
 
-    # nearest page number in next set
-    # undefine, if haven't place to be
+    # nearest page number of the next set (>= 1 or undef)
     $self->{page_of_next_set} = $self->{end_of_set} + 1;
     if ($self->{page_of_next_set} > $self->{total_pages}) {
         $self->{page_of_next_set} = undef;
     }
 
-    # slice params:
-
-    # start position of the slice
+    # starting position of the slice (>= 0)
     $self->{start_of_slice} = ($self->{current_page} - 1) * $self->{entries_per_page};
 
-    # end position of the slice
+    # ending position of the slice (>= 0)
     $self->{end_of_slice} = $self->{start_of_slice} + $self->{entries_per_page} - 1;
     if ($self->{end_of_slice} > $self->{total_entries} - 1) {
         $self->{end_of_slice} = $self->{total_entries} - 1;
     }
 
-    # length of the slice
+    # length of the slice (>= 1)
     $self->{length_of_slice} = $self->{end_of_slice} - $self->{start_of_slice} + 1;
 
     return $self;
@@ -130,7 +134,7 @@ Data::Pagination - Paginal navigation on some data
   # "slice params" group.
   #
   # example: SELECT ...
-  #          LIMIT $pg->{start_of_slice}, $pg->{length_of_slice}
+  #          LIMIT $pg->{length_of_slice} OFFSET $pg->{start_of_slice}
 
   # all properties from "statistics" group are copied from arguments,
   # and with some properties from other groups can be used for
@@ -168,7 +172,8 @@ Data::Pagination - Paginal navigation on some data
   # $pg->{page_of_prev_set}  /             \  $pg->{page_of_next_set}
   #                         /               \
   #             $pg->{start_of_set}     $pg->{end_of_set}
-  #
+  #                        |                 |
+  #                     [ $pg->{numbers_of_set} ]
   #
 
 =head1 DESCRIPTION
@@ -300,6 +305,10 @@ set (>= 1) or undefined, if haven't place to be
 B<$pg-E<gt>{page_of_next_set}> - nearest page number of the next set
 (>= 1) or undefined, if haven't place to be
 
+=item *
+
+B<$pg-E<gt>{numbers_of_set}> - numbers of set (one or more numbers in array)
+
 =back
 
 =head1 NOTES
@@ -337,6 +346,6 @@ L<Data::SimplePaginator|Data::SimplePaginator>
 
 =head1 AUTHOR
 
-Andrian Zubko E<lt>ondr@cpan.orgE<gt>
+Andrian Zubko E<lt>ondr@mail.ruE<gt>
 
 =cut

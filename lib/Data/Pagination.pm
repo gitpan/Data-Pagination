@@ -1,8 +1,8 @@
-package Pagination;
+package Data::Pagination;
 
 use strict;
 
-our $VERSION = '0.43';
+our $VERSION = '0.44';
 
 # {{{ new()
 
